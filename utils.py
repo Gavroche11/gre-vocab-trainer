@@ -9,12 +9,17 @@ import random
 
 
 def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
-    """Load words from CSV file"""
+    """
+    Load words from CSV file, assigning a unique ID to each row.
+    This ID ensures that every entry, even with identical words, is treated
+    as a distinct entity throughout the application.
+    """
     words = []
     with open(csv_file, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
-        for row in reader:
+        for i, row in enumerate(reader):
             words.append({
+                'id': str(i),  # Assign a unique ID based on row index.
                 'word': row['word'].strip(),
                 'definition': row['definition'].strip(),
                 'part_of_speech': row['part of speech'].strip(),
@@ -30,38 +35,28 @@ def create_multiple_choice_options(correct_word: Dict[str, str],
     """Create multiple choice options for a quiz"""
     options = [correct_word]
     
-    # Filter candidates
-    candidates = [w for w in all_words if w['word'] != correct_word['word']]
+    # Filter candidates, ensuring we don't pick the exact same entry.
+    candidates = [w for w in all_words if w['id'] != correct_word['id']]
     
     if match_pos:
-        # Try to match part of speech
         pos_matches = [w for w in candidates if w['part_of_speech'] == correct_word['part_of_speech']]
         if len(pos_matches) >= num_options - 1:
             candidates = pos_matches
     
-    # Select random options
     num_to_select = min(num_options - 1, len(candidates))
     options.extend(random.sample(candidates, num_to_select))
     
-    # Shuffle and return
     random.shuffle(options)
     return options
 
 
 def create_blanked_sentence(sentence: str, word: str) -> str:
     """Create a fill-in-the-blank sentence by replacing the word"""
-    # Create a pattern that matches the word with different cases
     pattern = re.compile(r'\b' + re.escape(word) + r'\b', re.IGNORECASE)
-    
-    # Replace with blanks
     blanked = pattern.sub('_____', sentence)
-    
-    # If no replacement was made, try to find partial matches
     if blanked == sentence:
-        # Try to find the word as part of another word
         pattern = re.compile(re.escape(word), re.IGNORECASE)
         blanked = pattern.sub('_____', sentence)
-    
     return blanked
 
 
@@ -145,32 +140,33 @@ def get_mastery_label(correct: int, incorrect: int, streak: int) -> str:
 
 def export_difficult_words(word_manager, progress_tracker, output_file: str, threshold: int = 7):
     """Export difficult words to a CSV file"""
-    difficult_words = []
+    difficult_words_ids = [
+        item[0] for item in progress_tracker.get_difficult_words(limit=None) 
+        if item[1].get('difficulty', 0) >= threshold
+    ]
     
-    for word_dict in word_manager.words:
-        stats = progress_tracker.get_word_stats(word_dict['word'])
-        if stats['difficulty'] >= threshold:
-            difficult_words.append({
+    difficult_words_data = []
+    for word_id in difficult_words_ids:
+        word_dict = word_manager.get_word_by_id(word_id)
+        if word_dict:
+            stats = progress_tracker.get_word_stats(word_id)
+            difficult_words_data.append({
                 **word_dict,
-                'difficulty': stats['difficulty'],
-                'correct_count': stats['correct'],
-                'incorrect_count': stats['incorrect']
+                'difficulty': stats.get('difficulty', 0),
+                'correct_count': stats.get('correct', 0),
+                'incorrect_count': stats.get('incorrect', 0)
             })
-    
-    # Sort by difficulty
-    difficult_words.sort(key=lambda x: x['difficulty'], reverse=True)
-    
-    # Write to CSV
-    if difficult_words:
-        fieldnames = ['word', 'definition', 'part_of_speech', 'example', 
+
+    if difficult_words_data:
+        difficult_words_data.sort(key=lambda x: x['difficulty'], reverse=True)
+        fieldnames = ['id', 'word', 'definition', 'part_of_speech', 'example', 
                      'difficulty', 'correct_count', 'incorrect_count']
-        
         with open(output_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction='ignore')
             writer.writeheader()
-            writer.writerows(difficult_words)
+            writer.writerows(difficult_words_data)
     
-    return len(difficult_words)
+    return len(difficult_words_data)
 
 
 def create_session_summary(words_reviewed: List[Dict[str, str]], 

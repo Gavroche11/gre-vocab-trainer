@@ -35,6 +35,7 @@ env/
 
 # Project specific
 data/
+playground/
 gre_progress.json
 *.csv
 !example_vocabulary.csv

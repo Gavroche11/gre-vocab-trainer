@@ -145,7 +145,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments 🙏
 
-- Inspired by popular GRE prep platforms like Magoosh
+- Inspired by popular GRE prep platforms like Magoosh (https://s3.amazonaws.com/magoosh.resources/magoosh-gre-1000-words_oct01.pdf)
 - Spaced repetition algorithm based on SM-2
 - Built with ❤️ using Streamlit
 
