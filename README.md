@@ -2,8 +2,8 @@
 
 A modern, interactive GRE vocabulary learning application built with Python and Streamlit. Master GRE words using scientifically-proven spaced repetition algorithms and engaging study modes.
 
-![Python](https://img.shields.io/badge/python-v3.8+-blue.svg)
-![Streamlit](https://img.shields.io/badge/streamlit-v1.28+-red.svg)
+![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
+![Streamlit](https://img.shields.io/badge/streamlit-v1.47+-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## Features ✨
@@ -34,7 +34,7 @@ git clone https://github.com/Gavroche11/gre-vocab-trainer.git
 cd gre-vocabulary-trainer
 ```
 
-2. Create a virtual environment (recommended):
+2. Create a conda environment (recommended):
 ```bash
 conda create -n gre-vocab-trainer python=3.11
 conda activate gre-vocab-trainer
