@@ -6,7 +6,6 @@ import csv
 import re
 from typing import Dict, List, Optional, Literal
 import random
-import pyinflect
 
 
 def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
