@@ -4,8 +4,9 @@ Utility functions for GRE Vocabulary Trainer
 
 import csv
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 import random
+import pyinflect
 
 
 def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
@@ -22,26 +23,26 @@ def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
                 'id': str(i),  # Assign a unique ID based on row index.
                 'word': row['word'].strip(),
                 'definition': row['definition'].strip(),
-                'part_of_speech': row['part of speech'].strip(),
-                'example': row['example'].strip()
+                'part_of_speech': row['part_of_speech'].strip(),
+                'example': row['example'].strip(),
+                'blanked_example': row['blanked_example'].strip(),
+                'word_in_sentence': row['word_in_sentence'].strip(),
+                'form': row['form']
             })
     return words
 
-
 def create_multiple_choice_options(correct_word: Dict[str, str], 
                                  all_words: List[Dict[str, str]], 
-                                 num_options: int = 4,
-                                 match_pos: bool = True) -> List[Dict[str, str]]:
+                                 num_options: int = 4) -> List[Dict[str, str]]:
     """Create multiple choice options for a quiz"""
     options = [correct_word]
     
     # Filter candidates, ensuring we don't pick the exact same entry.
     candidates = [w for w in all_words if w['id'] != correct_word['id']]
     
-    if match_pos:
-        pos_matches = [w for w in candidates if w['part_of_speech'] == correct_word['part_of_speech']]
-        if len(pos_matches) >= num_options - 1:
-            candidates = pos_matches
+    pos_matches = [w for w in candidates if w['part_of_speech'] == correct_word['part_of_speech']]
+    if len(pos_matches) >= num_options - 1:
+        candidates = pos_matches
     
     num_to_select = min(num_options - 1, len(candidates))
     options.extend(random.sample(candidates, num_to_select))

@@ -14,11 +14,11 @@ from core import WordManager, ProgressTracker, SpacedRepetitionScheduler
 from utils import (
     load_words_from_csv, 
     create_multiple_choice_options,
-    create_blanked_sentence,
     get_difficulty_label,
     get_mastery_label,
     format_time_ms,
-    create_session_summary
+    create_session_summary,
+    export_difficult_words
 )
 
 
@@ -117,7 +117,7 @@ def init_session_state():
     """Initialize session state variables"""
     if 'word_manager' not in st.session_state:
         # Check if CSV file exists
-        csv_file = "magoosh_gre_words.csv"
+        csv_file = "words_revised.csv"
         if os.path.exists(csv_file):
             words = load_words_from_csv(csv_file)
             st.session_state.word_manager = WordManager(words)
@@ -349,7 +349,6 @@ def render_quiz_mode():
             word_dict,
             st.session_state.word_manager.words,
             num_options=4,
-            match_pos=True
         )
         st.session_state.quiz_word = word_dict['word']
     options = st.session_state.quiz_options
@@ -385,14 +384,14 @@ def render_context_mode():
         state = st.session_state.context_answer_state
         word_dict = state['word_dict']
         is_correct = state['is_correct']
-        blanked_sentence = create_blanked_sentence(word_dict['example'], word_dict['word'])
+        blanked_example = word_dict["blanked_example"].replace("<BLANK>", "_____")
 
         # Redisplay the question card
         st.markdown(f"""
         <div class="word-card">
             <h3>Fill in the blank:</h3>
-            <p style="font-size: 1.2em;">{blanked_sentence}</p>
-            <p><em>{word_dict['part_of_speech']}</em></p>
+            <p style="font-size: 1.2em;">{blanked_example}</p>
+            <p><em>{word_dict['part_of_speech']}; {word_dict['form']}</em></p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -421,13 +420,13 @@ def render_context_mode():
     st.write(f"Question {progress} of {total}")
 
     # Create and display the blanked sentence
-    blanked_sentence = create_blanked_sentence(word_dict['example'], word_dict['word'])
+    blanked_example = word_dict["blanked_example"].replace("<BLANK>", "_____")
     
     st.markdown(f"""
     <div class="word-card">
         <h3>Fill in the blank:</h3>
-        <p style="font-size: 1.2em;">{blanked_sentence}</p>
-        <p><em>{word_dict['part_of_speech']}</em></p>
+        <p style="font-size: 1.2em;">{blanked_example}</p>
+        <p><em>{word_dict['part_of_speech']}; {word_dict['form']}</em></p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -436,8 +435,7 @@ def render_context_mode():
         st.session_state.context_options = create_multiple_choice_options(
             word_dict,
             st.session_state.word_manager.words,
-            num_options=4,
-            match_pos=True
+            num_options=4
         )
         st.session_state.context_word = word_dict['word']
     options = st.session_state.context_options
@@ -553,7 +551,50 @@ def render_statistics():
     st.divider()
     
     # Charts (no changes needed here)
-    # ...
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Mastery distribution
+        mastery_data = {
+            'Status': ['Mastered', 'Learning', 'New', 'Difficult'],
+            'Count': [
+                stats['mastered_words'],
+                stats['learning_words'],
+                len(st.session_state.word_manager.words) - stats['total_words_seen'],
+                stats['difficult_words']
+            ]
+        }
+        
+        fig_mastery = px.pie(
+            mastery_data, 
+            values='Count', 
+            names='Status',
+            title='Word Mastery Distribution',
+            color_discrete_map={
+                'Mastered': '#28a745',
+                'Learning': '#ffc107',
+                'New': '#17a2b8',
+                'Difficult': '#dc3545'
+            }
+        )
+        st.plotly_chart(fig_mastery, use_container_width=True)
+    
+    with col2:
+        # Study activity over time
+        sessions = st.session_state.progress_tracker.progress.get('sessions', [])
+        if sessions:
+            session_df = pd.DataFrame(sessions)
+            session_df['date'] = pd.to_datetime(session_df['date']).dt.date
+            daily_reviews = session_df.groupby('date')['reviews'].sum().reset_index()
+            
+            fig_activity = px.bar(
+                daily_reviews,
+                x='date',
+                y='reviews',
+                title='Daily Study Activity',
+                labels={'reviews': 'Words Reviewed', 'date': 'Date'}
+            )
+            st.plotly_chart(fig_activity, use_container_width=True)
 
     st.subheader("Most Difficult Words")
     # This method now returns a list of (word_id, stats_dict)
