@@ -117,7 +117,7 @@ def init_session_state():
     """Initialize session state variables"""
     if 'word_manager' not in st.session_state:
         # Check if CSV file exists
-        csv_file = "words_revised.csv"
+        csv_file = "words.csv"
         if os.path.exists(csv_file):
             words = load_words_from_csv(csv_file)
             st.session_state.word_manager = WordManager(words)
