@@ -1,161 +1,233 @@
 # GRE Vocabulary Trainer 📚
 
-A modern, interactive GRE vocabulary learning application built with Python and Streamlit. Master GRE words using scientifically-proven spaced repetition algorithms and engaging study modes.
+A modern, interactive GRE vocabulary learning application built with Python and Streamlit. Master GRE words using scientifically-proven spaced repetition algorithms and engaging study modes with intelligent progress tracking.
 
 ![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
 ![Streamlit](https://img.shields.io/badge/streamlit-v1.47+-red.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-## Features ✨
+## ✨ Features
 
-### Study Modes
-- **📇 Flashcard Mode**: Traditional flashcards with spaced repetition
-- **📝 Quiz Mode**: Multiple-choice questions to test your knowledge
-- **📖 Context Mode**: Fill-in-the-blank exercises using example sentences
+### 🎯 Study Modes
+- **📇 Flashcard Mode**: Traditional flashcards with spaced repetition - review word definitions at your own pace
+- **📝 Quiz Mode**: Multiple-choice questions testing definition recall with immediate feedback
+- **📖 Context Mode**: Fill-in-the-blank exercises using real GRE example sentences
 
-### Smart Learning
-- **Spaced Repetition Algorithm**: Reviews words at optimal intervals for long-term retention
-- **Adaptive Difficulty**: Tracks which words you struggle with and prioritizes them
-- **Progress Tracking**: Comprehensive statistics on your learning journey
-- **Study Streaks**: Motivation through daily streak tracking
+### 🧠 Smart Learning System
+- **Spaced Repetition Algorithm**: Reviews words at scientifically optimal intervals for long-term retention
+- **Adaptive Difficulty Tracking**: Automatically identifies and prioritizes words you struggle with
+- **Intelligent Session Building**: Balances new words with review words based on your progress
+- **Unique Word Tracking**: Each word entry has a unique ID to prevent conflicts with duplicate words
 
-### Data Management
-- **Import/Export**: Upload your own vocabulary CSV files
-- **Export Difficult Words**: Create custom word lists based on difficulty
-- **Search Functionality**: Quick lookup of any word in your vocabulary set
+### 📊 Progress Analytics
+- **Comprehensive Statistics**: Track mastery levels, accuracy rates, and study streaks
+- **Performance Visualization**: Interactive charts showing your learning progress over time
+- **Difficulty Analysis**: Identify your most challenging words with detailed breakdowns
+- **Session Summaries**: Review your performance after each study session
 
-## Installation 🚀
+### 📁 Data Management
+- **CSV Import/Export**: Upload your own vocabulary files or export difficult words
+- **Persistent Progress**: Automatic saving of all progress in `data/gre_progress.json`
+- **Word Search**: Quick lookup functionality for any word in your vocabulary set
+- **Dark/Light Mode**: Automatic theme detection for comfortable studying
 
-### Setup
+## 🚀 Installation
 
-1. Clone the repository:
+### Prerequisites
+- Python 3.11 or higher
+- pip or conda package manager
+
+### Quick Setup
+
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/Gavroche11/gre-vocab-trainer.git
-cd gre-vocabulary-trainer
+cd gre-vocab-trainer
 ```
 
-2. Create a conda environment (recommended):
+2. **Create a virtual environment (recommended):**
 ```bash
+# Using conda
 conda create -n gre-vocab-trainer python=3.11
 conda activate gre-vocab-trainer
+
+# Or using venv
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. Install dependencies:
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Run the application:
+4. **Prepare your vocabulary file:**
+   - Use the included `example_vocabulary.csv` as a template
+   - Or upload your own CSV file through the app interface
+
+5. **Run the application:**
 ```bash
 streamlit run app.py
 ```
 
-The application will open in your default web browser at `http://localhost:8501`.
+The application will open automatically in your default web browser at `http://localhost:8501`.
 
-## Usage 📖
+## 📖 Usage Guide
 
 ### Getting Started
-1. **Upload Vocabulary**: Use the sidebar to upload your GRE vocabulary CSV file
-2. **Choose Study Mode**: Select from Flashcards, Quiz, or Context mode
-3. **Study Daily**: The app will automatically schedule reviews using spaced repetition
-4. **Track Progress**: Monitor your mastery and identify difficult words
+1. **Load Vocabulary**: Upload your GRE vocabulary CSV file using the sidebar
+2. **Choose Study Mode**: Select from Flashcards, Quiz, or Context exercises
+3. **Study Consistently**: The app automatically schedules optimal review intervals
+4. **Monitor Progress**: Track your mastery with detailed statistics and visualizations
 
-### CSV File Format
-The vocabulary CSV file should have the following columns:
-- `word`: The vocabulary word
-- `definition`: The word's definition
-- `part of speech`: Part of speech (noun, verb, adjective, etc.)
-- `example`: An example sentence using the word
+### Study Session Flow
+- Each session intelligently combines new words with review words
+- Answer accuracy and response time are automatically tracked
+- Words you struggle with are scheduled for more frequent review
+- Session summaries provide immediate feedback on your performance
 
-Example:
+### Understanding the Statistics
+- **Mastered**: Words with a streak of 3+ correct answers
+- **Learning**: Words you're making progress on (1-2 correct streak)
+- **Difficult**: Words with high difficulty scores (≥7)
+- **Accuracy Rate**: Overall percentage of correct answers
+
+## 📋 CSV File Format
+
+Your vocabulary CSV must include these exact column headers:
+
 ```csv
-word,definition,part of speech,example
-aberrant,markedly different from an accepted norm,adjective,"When the financial director started screaming and throwing food at his co-workers, the police had to come in to deal with his aberrant behavior."
+word,definition,part_of_speech,example,word_in_sentence,blanked_example,form
 ```
 
-### Data Persistence
-Your progress is automatically saved in `data/gre_progress.json`. This file tracks:
-- Word statistics (correct/incorrect counts)
-- Spaced repetition scheduling
-- Study streaks
-- Session history
+**Example row:**
+```csv
+aberrant,markedly different from an accepted norm,adjective,"When the financial director started screaming and throwing food at his co-workers, the police had to come in to deal with his aberrant behavior.",aberrant,"When the financial director started screaming and throwing food at his co-workers, the police had to come in to deal with his <BLANK> behavior.",base
+```
 
-## Project Structure 📁
+**Column descriptions:**
+- `word`: The vocabulary word to learn
+- `definition`: Clear, concise definition
+- `part_of_speech`: Grammar category (noun, verb, adjective, etc.)
+- `example`: Complete sentence using the word in context
+- `word_in_sentence`: The specific form of the word used in the example
+- `blanked_example`: Example sentence with the word replaced by `<BLANK>`
+- `form`: Grammatical form used (base, plural, past tense, etc.)
+
+## 🏗️ Project Structure
 
 ```
 gre-vocabulary-trainer/
-├── app.py              # Streamlit application
-├── core.py             # Core logic (word management, progress tracking)
-├── utils.py            # Utility functions
-├── requirements.txt    # Python dependencies
-├── README.md          # This file
-├── data/              # Progress data directory (created automatically)
-│   └── gre_progress.json
-└── magoosh_gre_words.csv  # Example vocabulary file (optional)
+├── app.py                    # Main Streamlit application
+├── core.py                   # Core logic (WordManager, ProgressTracker, SpacedRepetitionScheduler)
+├── utils.py                  # Utility functions (CSV loading, quiz generation, etc.)
+├── requirements.txt          # Python dependencies
+├── example_vocabulary.csv    # Sample vocabulary file with proper format
+├── .gitignore               # Git ignore rules
+├── LICENSE                  # MIT license
+├── README.md               # This file
+└── data/                   # Auto-created directory for progress storage
+    └── gre_progress.json   # Your learning progress (auto-generated)
 ```
 
-## Deployment 🌐
+## 🔧 Core Components
 
-### Deploy to Streamlit Cloud
+### WordManager
+- Loads and manages vocabulary words with unique ID tracking
+- Provides search functionality across words and definitions
+- Handles word lookups by unique identifier
 
-1. Push your code to GitHub
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect your GitHub repository
-4. Deploy!
+### ProgressTracker
+- Tracks learning statistics for each word using unique IDs
+- Implements spaced repetition scheduling
+- Manages study streaks and session history
+- Automatically saves progress to JSON file
 
-### Deploy to Heroku
+### SpacedRepetitionScheduler
+- Builds intelligent study sessions mixing new and review words
+- Prioritizes words based on difficulty and review schedule
+- Balances session composition for optimal learning
 
-tbw
+## 🎨 Customization
 
-## Customization 🎨
+### Modifying Spaced Repetition Intervals
+Edit the `calculate_next_review` method in `core.py`:
+```python
+def calculate_next_review(self, correct_count: int, incorrect_count: int, streak: int) -> datetime:
+    # Adjust these hour values to change review frequency
+    if incorrect_count > correct_count: hours = 4
+    elif streak == 0: hours = 12
+    elif streak == 1: hours = 24
+    # ... continue customizing
+```
 
-### Modifying Study Algorithms
+### Changing Session Size and New Word Ratio
+Modify the `get_review_session` parameters in `app.py`:
+```python
+st.session_state.scheduler.get_review_session(session_size=20, new_words_ratio=0.3)
+```
 
-Edit `core.py` to adjust:
-- Spaced repetition intervals
-- Difficulty calculations
-- Session sizing
-
-### Adding New Study Modes
-
-1. Create new render function in `app.py`
-2. Add mode to navigation in `render_sidebar()`
-3. Implement mode logic
-
-### Styling
-
-Modify the CSS in `app.py` to change:
+### Styling and Themes
+The app includes CSS for both light and dark themes. Modify the styles in `app.py` to customize:
 - Color schemes
 - Card layouts
 - Button styles
+- Typography
 
-## Contributing 🤝
+## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+Contributions are welcome! Here's how to get started:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes with clear, descriptive commits
+4. Add tests if applicable
+5. Update documentation as needed
+6. Submit a pull request
 
-## License 📄
+### Development Guidelines
+- Follow Python PEP 8 style guidelines
+- Write clear docstrings for functions and classes
+- Test new features thoroughly
+- Update the README if you add new functionality
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"CSV file not found" error:**
+- Ensure your CSV file is in the correct format
+- Check that all required columns are present
+- Verify file encoding is UTF-8
+
+**Progress not saving:**
+- Check that the `data/` directory can be created
+- Ensure write permissions in the project directory
+- Look for error messages in the Streamlit console
+
+**Import errors:**
+- Verify all dependencies are installed: `pip install -r requirements.txt`
+- Check Python version compatibility (3.11+)
+- Try recreating your virtual environment
+
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments 🙏
+## 🙏 Acknowledgments
 
-- Inspired by popular GRE prep platforms like Magoosh (https://s3.amazonaws.com/magoosh.resources/magoosh-gre-1000-words_oct01.pdf)
-- Spaced repetition algorithm based on SM-2
-- Built with ❤️ using Streamlit
+- Spaced repetition algorithm inspired by the SM-2 algorithm
+- Example vocabulary includes words commonly found on the GRE (https://s3.amazonaws.com/magoosh.resources/magoosh-gre-1000-words_oct01.pdf)
+- Built with ❤️ using Streamlit for the interactive interface
+- Progress tracking and analytics powered by Plotly visualizations
 
-## Support 💬
+## 📞 Support
 
-If you have any questions or run into issues:
-- Open an issue on GitHub
-- Check existing issues for solutions
+If you encounter issues or have questions:
+- Check the [Issues](https://github.com/Gavroche11/gre-vocab-trainer/issues) page for existing solutions
+- Open a new issue with detailed information about your problem
 - Contribute improvements back to the community
 
 ---
 
-Happy studying! 🎓 May your GRE vocabulary be ever expanding!
+**Happy studying!** 🎓 Build your GRE vocabulary systematically and efficiently with spaced repetition!
