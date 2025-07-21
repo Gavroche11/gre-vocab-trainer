@@ -26,18 +26,16 @@ A modern, interactive GRE vocabulary learning application built with Python and 
 - **Session Summaries**: Review your performance after each study session
 
 ### 📁 Data Management
-- **CSV Import/Export**: Upload your own vocabulary files or export difficult words
+- **Dynamic CSV Upload**: Upload and switch between different vocabulary files during your session
+- **Format Validation**: Automatic validation ensures your CSV files are correctly formatted
 - **Persistent Progress**: Automatic saving of all progress in `data/gre_progress.json`
+- **Export Functionality**: Export difficult words or create custom study sets
 - **Word Search**: Quick lookup functionality for any word in your vocabulary set
 - **Dark/Light Mode**: Automatic theme detection for comfortable studying
 
-## 🚀 Installation
+## 🚀 Installation & Deployment
 
-### Prerequisites
-- Python 3.11 or higher
-- pip or conda package manager
-
-### Quick Setup
+### Local Installation
 
 1. **Clone the repository:**
 ```bash
@@ -61,16 +59,32 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. **Prepare your vocabulary file:**
-   - Use the included `example_vocabulary.csv` as a template
-   - Or upload your own CSV file through the app interface
-
-5. **Run the application:**
+4. **Run the application:**
 ```bash
 streamlit run app.py
 ```
 
 The application will open automatically in your default web browser at `http://localhost:8501`.
+
+### Streamlit Cloud Deployment
+
+1. **Fork this repository** to your GitHub account
+
+2. **Go to [share.streamlit.io](https://share.streamlit.io)** and sign in
+
+3. **Deploy the app:**
+   - Click "New app"
+   - Select your forked repository
+   - Set main file path to `app.py`
+   - Click "Deploy!"
+
+4. **Upload your vocabulary:**
+   - Once deployed, use the sidebar upload feature to add your CSV file
+   - The app will validate and load your vocabulary automatically
+
+### Other Deployment Options
+
+tbw
 
 ## 📖 Usage Guide
 
@@ -91,6 +105,12 @@ The application will open automatically in your default web browser at `http://l
 - **Learning**: Words you're making progress on (1-2 correct streak)
 - **Difficult**: Words with high difficulty scores (≥7)
 - **Accuracy Rate**: Overall percentage of correct answers
+
+### Using Different CSV Files
+- Upload new vocabulary files anytime using the sidebar
+- The app automatically validates CSV format and required columns
+- Switch between different vocabulary sets while preserving individual progress
+- Download the example template if you need help with formatting
 
 ## 📋 CSV File Format
 
@@ -123,11 +143,11 @@ gre-vocabulary-trainer/
 ├── utils.py                  # Utility functions (CSV loading, quiz generation, etc.)
 ├── requirements.txt          # Python dependencies
 ├── example_vocabulary.csv    # Sample vocabulary file with proper format
-├── .gitignore               # Git ignore rules
-├── LICENSE                  # MIT license
-├── README.md               # This file
-└── data/                   # Auto-created directory for progress storage
-    └── gre_progress.json   # Your learning progress (auto-generated)
+├── .gitignore                # Git ignore rules
+├── LICENSE                   # MIT license
+├── README.md                 # This file
+└── data/                     # Auto-created directory for progress storage
+    └── gre_progress.json     # Your learning progress (auto-generated)
 ```
 
 ## 🔧 Core Components
@@ -196,9 +216,10 @@ Contributions are welcome! Here's how to get started:
 ### Common Issues
 
 **"CSV file not found" error:**
-- Ensure your CSV file is in the correct format
-- Check that all required columns are present
-- Verify file encoding is UTF-8
+- Upload your CSV file using the sidebar file uploader
+- Ensure your CSV file has the correct format and required columns
+- Check that file encoding is UTF-8
+- Try downloading and using the example template
 
 **Progress not saving:**
 - Check that the `data/` directory can be created
