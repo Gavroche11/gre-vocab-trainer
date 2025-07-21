@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
 import os
+import tempfile
 
 from core import WordManager, ProgressTracker, SpacedRepetitionScheduler
 from utils import (
@@ -18,7 +19,8 @@ from utils import (
     get_mastery_label,
     format_time_ms,
     create_session_summary,
-    export_difficult_words
+    export_difficult_words,
+    validate_csv_format
 )
 
 
@@ -109,30 +111,40 @@ st.markdown("""
         background-color: #2d3748;
         color: #e2e8f0;
     }
+    
+    .upload-info {
+        background-color: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 12px;
+        margin: 10px 0;
+        border-radius: 4px;
+    }
+    
+    [data-testid="stAppViewContainer"][data-theme="dark"] .upload-info {
+        background-color: #1a237e;
+        border-left-color: #64b5f6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 
 def init_session_state():
     """Initialize session state variables"""
+    # Initialize core components as None
     if 'word_manager' not in st.session_state:
-        # Check if CSV file exists
-        csv_file = "words.csv"
-        if os.path.exists(csv_file):
-            words = load_words_from_csv(csv_file)
-            st.session_state.word_manager = WordManager(words)
-        else:
-            st.error(f"CSV file '{csv_file}' not found. Please upload it.")
-            st.session_state.word_manager = None
+        st.session_state.word_manager = None
     
     if 'progress_tracker' not in st.session_state:
         st.session_state.progress_tracker = ProgressTracker("data/gre_progress.json")
     
-    if 'scheduler' not in st.session_state and st.session_state.word_manager:
-        st.session_state.scheduler = SpacedRepetitionScheduler(
-            st.session_state.word_manager,
-            st.session_state.progress_tracker
-        )
+    if 'scheduler' not in st.session_state:
+        st.session_state.scheduler = None
+    
+    # CSV upload state
+    if 'csv_uploaded' not in st.session_state:
+        st.session_state.csv_uploaded = False
+    if 'csv_filename' not in st.session_state:
+        st.session_state.csv_filename = None
     
     # Study session state
     if 'current_mode' not in st.session_state:
@@ -161,7 +173,72 @@ def init_session_state():
         st.session_state.context_word = None
     if 'show_answer' not in st.session_state:
         st.session_state.show_answer = False
+
+
+def load_vocabulary_from_file(uploaded_file):
+    """Load vocabulary from uploaded file and initialize managers"""
+    try:
+        # Save uploaded file to temporary location
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.csv', delete=False) as tmp_file:
+            tmp_file.write(uploaded_file.getbuffer())
+            temp_path = tmp_file.name
+        
+        # Validate CSV format
+        validation_result = validate_csv_format(temp_path)
+        if not validation_result['valid']:
+            st.error(f"CSV format error: {validation_result['error']}")
+            os.unlink(temp_path)
+            return False
+        
+        # Load words from CSV
+        words = load_words_from_csv(temp_path)
+        
+        # Clean up temp file
+        os.unlink(temp_path)
+        
+        if not words:
+            st.error("No valid words found in the CSV file.")
+            return False
+        
+        # Initialize word manager and scheduler
+        st.session_state.word_manager = WordManager(words)
+        st.session_state.scheduler = SpacedRepetitionScheduler(
+            st.session_state.word_manager,
+            st.session_state.progress_tracker
+        )
+        
+        st.session_state.csv_uploaded = True
+        st.session_state.csv_filename = uploaded_file.name
+        
+        st.success(f"Successfully loaded {len(words)} words from {uploaded_file.name}!")
+        return True
+        
+    except Exception as e:
+        st.error(f"Error loading CSV file: {str(e)}")
+        return False
+
+
+def try_load_default_csv():
+    """Try to load default CSV files if they exist"""
+    default_files = ["magoosh_words_revised.csv", "example_words.csv"]
     
+    for filename in default_files:
+        if os.path.exists(filename):
+            try:
+                words = load_words_from_csv(filename)
+                if words:
+                    st.session_state.word_manager = WordManager(words)
+                    st.session_state.scheduler = SpacedRepetitionScheduler(
+                        st.session_state.word_manager,
+                        st.session_state.progress_tracker
+                    )
+                    st.session_state.csv_uploaded = True
+                    st.session_state.csv_filename = filename
+                    return True
+            except Exception:
+                continue
+    
+    return False
 
 
 def render_sidebar():
@@ -169,7 +246,45 @@ def render_sidebar():
     with st.sidebar:
         st.title("📚 GRE Vocab Trainer")
         
-        # Quick stats
+        # File upload section
+        st.subheader("📁 Load Vocabulary")
+        
+        # Show current file status
+        if st.session_state.csv_uploaded and st.session_state.csv_filename:
+            st.success(f"📄 Using: {st.session_state.csv_filename}")
+            if st.session_state.word_manager:
+                st.info(f"📊 {len(st.session_state.word_manager.words)} words loaded")
+        else:
+            st.warning("⚠️ No vocabulary file loaded")
+        
+        # File upload widget
+        uploaded_file = st.file_uploader(
+            "Upload CSV File", 
+            type=['csv'],
+            help="Upload a CSV file with GRE vocabulary words"
+        )
+        
+        if uploaded_file is not None:
+            if st.button("📥 Load Vocabulary", type="primary"):
+                if load_vocabulary_from_file(uploaded_file):
+                    st.rerun()
+        
+        # CSV format info
+        with st.expander("ℹ️ CSV Format Requirements"):
+            st.markdown("""
+            Your CSV must have these columns:
+            - `word`: The vocabulary word
+            - `definition`: Word definition
+            - `part_of_speech`: Grammar type
+            - `example`: Example sentence
+            - `word_in_sentence`: Word form in example
+            - `blanked_example`: Example with `<BLANK>`
+            - `form`: Grammatical form
+            """)
+        
+        st.divider()
+        
+        # Quick stats (only if vocabulary is loaded)
         if st.session_state.word_manager:
             stats = st.session_state.progress_tracker.get_statistics()
             
@@ -181,49 +296,41 @@ def render_sidebar():
                 st.metric("Day Streak", f"{stats['streak_days']} 🔥")
                 st.metric("Mastered", stats['mastered_words'])
         
-        st.divider()
-        
-        # Navigation
-        st.subheader("Study Modes")
-        
-        if st.button("📇 Flashcard mode", type="primary"):
-            start_study_session("flashcard")
-        
-        if st.button("📝 Quiz Mode", type="primary"):
-            start_study_session("quiz")
-        
-        if st.button("📖 Context Mode", type="primary"):
-            start_study_session("context")
-        
-        st.divider()
-        
-        st.subheader("Tools")
-        
-        if st.button("📊 Statistics"):
-            st.session_state.current_mode = "statistics"
-        
-        if st.button("🔍 Word Search"):
-            st.session_state.current_mode = "search"
-        
-        if st.button("📤 Export Difficult Words"):
-            st.session_state.current_mode = "export"
-        
-        st.divider()
-        
-        # File upload
-        st.subheader("Data Management")
-        uploaded_file = st.file_uploader("Upload CSV", type=['csv'])
-        if uploaded_file is not None:
-            # Save the uploaded file
-            with open("magoosh_gre_words.csv", "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            st.success("File uploaded successfully!")
-            # Reload the app
-            st.rerun()
+            st.divider()
+            
+            # Study mode navigation
+            st.subheader("🎯 Study Modes")
+            
+            if st.button("📇 Flashcard mode", type="primary"):
+                start_study_session("flashcard")
+            
+            if st.button("📝 Quiz Mode", type="primary"):
+                start_study_session("quiz")
+            
+            if st.button("📖 Context Mode", type="primary"):
+                start_study_session("context")
+            
+            st.divider()
+            
+            # Tools section
+            st.subheader("🔧 Tools")
+            
+            if st.button("📊 Statistics"):
+                st.session_state.current_mode = "statistics"
+            
+            if st.button("🔍 Word Search"):
+                st.session_state.current_mode = "search"
+            
+            if st.button("📤 Export Difficult Words"):
+                st.session_state.current_mode = "export"
 
 
 def start_study_session(mode: str):
     """Start a new study session."""
+    if not st.session_state.word_manager:
+        st.error("Please upload a vocabulary CSV file first!")
+        return
+    
     st.session_state.current_mode = mode
     st.session_state.session_words = st.session_state.scheduler.get_review_session(20)
     st.session_state.current_word_idx = 0
@@ -619,7 +726,6 @@ def render_statistics():
             st.dataframe(pd.DataFrame(diff_data), use_container_width=True)
 
 
-
 def render_word_search():
     """Render word search interface, using word IDs for stats lookup."""
     st.title("🔍 Word Search")
@@ -668,14 +774,85 @@ def render_export():
             st.info(f"No words found with difficulty >= {difficulty_threshold}")
 
 
+def render_welcome_screen():
+    """Render the welcome screen when no vocabulary is loaded"""
+    st.title("📚 Welcome to GRE Vocabulary Trainer")
+    st.write("Master GRE vocabulary with spaced repetition and interactive exercises!")
+    
+    # Upload prompt
+    st.markdown("""
+    <div class="upload-info">
+        <h3>🚀 Get Started</h3>
+        <p>To begin studying, please upload a CSV file with your GRE vocabulary words using the sidebar.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📋 CSV Format Required")
+        st.markdown("""
+        Your CSV file must include these columns:
+        - **word**: The vocabulary word
+        - **definition**: Word definition  
+        - **part_of_speech**: Grammar type (noun, verb, etc.)
+        - **example**: Example sentence using the word
+        - **word_in_sentence**: Form of word used in example
+        - **blanked_example**: Example with word replaced by `<BLANK>`
+        - **form**: Grammatical form (base, plural, past tense, etc.)
+        """)
+    
+    with col2:
+        st.subheader("✨ Features")
+        st.markdown("""
+        - **📇 Flashcard Mode**: Traditional flashcards with spaced repetition
+        - **📝 Quiz Mode**: Multiple-choice definition quizzes
+        - **📖 Context Mode**: Fill-in-the-blank exercises
+        - **🧠 Smart Learning**: Adaptive difficulty and scheduling
+        - **📊 Progress Tracking**: Detailed statistics and analytics
+        - **🔍 Word Search**: Quick lookup and review
+        """)
+    
+    # Sample CSV download
+    st.subheader("📄 Need a Template?")
+    st.write("Download the example CSV file to see the correct format:")
+    
+    if os.path.exists("example_vocabulary.csv"):
+        with open("example_vocabulary.csv", "r", encoding="utf-8") as f:
+            csv_content = f.read()
+        st.download_button(
+            label="📥 Download Example CSV",
+            data=csv_content,
+            file_name="example_vocabulary.csv",
+            mime="text/csv",
+            help="Use this as a template for your own vocabulary file"
+        )
+    
+    # Tips
+    st.subheader("💡 Tips for Best Results")
+    st.markdown("""
+    1. **Consistent Study**: Review words daily for best retention
+    2. **Quality Over Quantity**: Focus on understanding rather than speed  
+    3. **Use All Modes**: Each study mode reinforces learning differently
+    4. **Track Progress**: Monitor your statistics to identify weak areas
+    5. **Export Difficult Words**: Create focused study sets for challenging words
+    """)
+
+
 def main():
     """Main app function"""
     init_session_state()
+    
+    # Try to load default CSV on first run
+    if not st.session_state.csv_uploaded and not st.session_state.word_manager:
+        if try_load_default_csv():
+            st.rerun()
+    
     render_sidebar()
     
     # Check if word manager is loaded
-    if not st.session_state.get('word_manager'):
-        st.error("Please upload the GRE vocabulary CSV file using the sidebar.")
+    if not st.session_state.word_manager:
+        render_welcome_screen()
         return
     
     # Render current mode
@@ -694,35 +871,47 @@ def main():
     elif st.session_state.current_mode == "export":
         render_export()
     else:
-        # Welcome screen
-        st.title("📚 Welcome to GRE Vocabulary Trainer")
-        st.write("Master GRE vocabulary with spaced repetition and interactive exercises!")
+        # Dashboard screen when vocabulary is loaded
+        st.title("📚 GRE Vocabulary Trainer")
         
-        st.info("""
-        ### How to get started:
-        1. Choose a study mode from the sidebar
-        2. Review words using flashcards, quizzes, or context exercises
-        3. Track your progress with detailed statistics
-        4. Focus on difficult words with smart scheduling
-        """)
+        # Quick stats overview
+        stats = st.session_state.progress_tracker.get_statistics()
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("📖 Total Words", len(st.session_state.word_manager.words))
+        with col2:
+            st.metric("📊 Words Studied", stats['total_words_seen'])
+        with col3:
+            st.metric("✅ Mastered", stats['mastered_words'])
+        with col4:
+            st.metric("🔥 Streak", f"{stats['streak_days']} days")
+        
+        st.divider()
+        
+        st.subheader("🎯 Ready to Study?")
+        st.write("Choose a study mode to begin your GRE vocabulary practice:")
         
         # Quick start buttons
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            if st.button("📇 Flashcard mode", type="primary", use_container_width=True):
+            if st.button("📇 Start Flashcards", type="primary", use_container_width=True):
                 start_study_session("flashcard")
                 st.rerun()
+            st.write("Review definitions at your own pace")
         
         with col2:
-            if st.button("📝 Quiz mode", type="primary", use_container_width=True):
+            if st.button("📝 Take Quiz", type="primary", use_container_width=True):
                 start_study_session("quiz")
                 st.rerun()
+            st.write("Multiple-choice definition matching")
         
         with col3:
-            if st.button("📖 Context mode", type="primary", use_container_width=True):
+            if st.button("📖 Practice Context", type="primary", use_container_width=True):
                 start_study_session("context")
                 st.rerun()
+            st.write("Fill-in-the-blank sentence completion")
 
 
 if __name__ == "__main__":

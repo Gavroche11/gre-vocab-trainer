@@ -8,6 +8,70 @@ from typing import Dict, List, Optional, Literal
 import random
 
 
+def validate_csv_format(csv_file: str) -> Dict[str, any]:
+    """
+    Validate that the CSV file has the correct format and required columns.
+    
+    Returns:
+        Dict with 'valid' boolean and 'error' message if invalid
+    """
+    required_columns = [
+        'word', 'definition', 'part_of_speech', 'example',
+        'word_in_sentence', 'blanked_example', 'form'
+    ]
+    
+    try:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            # Try to read the first few lines to detect format
+            sample = f.read(1024)
+            f.seek(0)
+            
+            # Use csv.Sniffer to detect delimiter
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            
+            # Read the header
+            reader = csv.DictReader(f, delimiter=delimiter)
+            
+            # Check if all required columns are present
+            if not reader.fieldnames:
+                return {'valid': False, 'error': 'No header row found in CSV file'}
+            
+            missing_columns = [col for col in required_columns if col not in reader.fieldnames]
+            if missing_columns:
+                return {
+                    'valid': False, 
+                    'error': f'Missing required columns: {", ".join(missing_columns)}'
+                }
+            
+            # Check if there's at least one valid row
+            rows_checked = 0
+            valid_rows = 0
+            
+            for row in reader:
+                rows_checked += 1
+                if rows_checked > 10:  # Check only first 10 rows for validation
+                    break
+                
+                # Check if row has content in required fields
+                if (row.get('word', '').strip() and 
+                    row.get('definition', '').strip() and
+                    row.get('example', '').strip()):
+                    valid_rows += 1
+            
+            if valid_rows == 0:
+                return {'valid': False, 'error': 'No valid rows found with required data'}
+            
+            return {'valid': True, 'error': None}
+            
+    except UnicodeDecodeError:
+        return {'valid': False, 'error': 'File encoding error. Please save your CSV as UTF-8'}
+    except csv.Error as e:
+        return {'valid': False, 'error': f'CSV format error: {str(e)}'}
+    except Exception as e:
+        return {'valid': False, 'error': f'Error reading file: {str(e)}'}
+
+
 def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
     """
     Load words from CSV file, assigning a unique ID to each row.
@@ -15,19 +79,35 @@ def load_words_from_csv(csv_file: str) -> List[Dict[str, str]]:
     as a distinct entity throughout the application.
     """
     words = []
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for i, row in enumerate(reader):
-            words.append({
-                'id': str(i),  # Assign a unique ID based on row index.
-                'word': row['word'].strip(),
-                'definition': row['definition'].strip(),
-                'part_of_speech': row['part_of_speech'].strip(),
-                'example': row['example'].strip(),
-                'blanked_example': row['blanked_example'].strip(),
-                'word_in_sentence': row['word_in_sentence'].strip(),
-                'form': row['form']
-            })
+    try:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            # Detect delimiter
+            sample = f.read(1024)
+            f.seek(0)
+            sniffer = csv.Sniffer()
+            delimiter = sniffer.sniff(sample).delimiter
+            
+            reader = csv.DictReader(f, delimiter=delimiter)
+            for i, row in enumerate(reader):
+                # Skip rows with missing essential data
+                if not (row.get('word', '').strip() and 
+                        row.get('definition', '').strip()):
+                    continue
+                
+                words.append({
+                    'id': str(i),  # Assign a unique ID based on row index.
+                    'word': row.get('word', '').strip(),
+                    'definition': row.get('definition', '').strip(),
+                    'part_of_speech': row.get('part_of_speech', '').strip(),
+                    'example': row.get('example', '').strip(),
+                    'blanked_example': row.get('blanked_example', '').strip(),
+                    'word_in_sentence': row.get('word_in_sentence', '').strip(),
+                    'form': row.get('form', 'base').strip()
+                })
+    except Exception as e:
+        print(f"Error loading CSV: {e}")
+        return []
+    
     return words
 
 def create_multiple_choice_options(correct_word: Dict[str, str], 

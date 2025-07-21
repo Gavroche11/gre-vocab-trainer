@@ -38,7 +38,7 @@ data/
 playground/
 gre_progress.json
 *.csv
-!example_vocabulary.csv
+!example_words.csv
 difficult_words_*.csv
 
 # Streamlit
